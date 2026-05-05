@@ -1,0 +1,216 @@
+---
+name: manim-workflow
+description: Use this skill when creating, rendering, organizing, or extending Manim animations in this repository, especially when clips are split into ordered sections such as A01, A02, B01 and need concat-ready script and video naming.
+---
+
+# Manim Workflow
+
+## Directory Layout
+
+For each dated visualization project, keep the working files under one date directory:
+
+```text
+YYYY-MM-DD/
+├── topic_or_backlog.md
+├── storyboards/
+│   └── A01-short_slug.md
+├── scripts/
+│   └── A01-short_slug.py
+└── video_outputs/
+    ├── A01-short_slug_720p.mp4
+    ├── A01-short_slug_480p.mp4
+    ├── videos/      # Manim-generated cache/output tree
+    ├── images/      # Manim-generated stills, if any
+    └── texts/       # Manim-generated text SVG cache
+```
+
+Rules:
+
+1. Keep project-level goals, clip index, and high-level backlog in the date-level markdown file.
+2. Put detailed per-clip descriptions in `YYYY-MM-DD/storyboards/`.
+3. Put Manim source scripts in `YYYY-MM-DD/scripts/`.
+4. Put top-level rendered clips in `YYYY-MM-DD/video_outputs/`.
+5. Allow Manim to create nested folders under `video_outputs/videos`, `video_outputs/images`, and `video_outputs/texts`, but do not treat those nested files as the canonical clip outputs.
+6. Copy the final rendered MP4 from Manim's nested output tree to the top level of `video_outputs/`.
+7. Keep planning/backlog markdown in the date directory and update it when source paths, render commands, or output names change.
+
+## Naming Convention
+
+Use one shared stem for each clip:
+
+```text
+<SECTION><CLIP_NUMBER>-<slug>
+```
+
+Where:
+
+1. `SECTION` is an uppercase letter in final-video order: `A`, `B`, `C`, ...
+2. `CLIP_NUMBER` is two digits within that section: `01`, `02`, `03`, ...
+3. `slug` is short, lowercase, and descriptive. Use underscores inside the slug when useful.
+
+Examples:
+
+```text
+A01-score_intuition
+A02-single_gaussian_score
+B01-ve_forward_noise
+C01-flow_matching_transport
+```
+
+File names:
+
+```text
+YYYY-MM-DD/storyboards/A01-score_intuition.md
+YYYY-MM-DD/scripts/A01-score_intuition.py
+YYYY-MM-DD/video_outputs/A01-score_intuition_720p.mp4
+YYYY-MM-DD/video_outputs/A01-score_intuition_480p.mp4
+```
+
+The storyboard, script, and output files for one clip should share the same stem.
+
+Scene class names should be valid Python identifiers and should mirror the stem when practical:
+
+```python
+class A01ScoreIntuition(Scene):
+    ...
+```
+
+If an existing class name is already stable, keep it unless renaming helps readability or automation.
+
+## Storyboard Files
+
+Use one storyboard markdown file per clip:
+
+```text
+YYYY-MM-DD/storyboards/A01-score_intuition.md
+```
+
+The storyboard is the source of truth for that clip's intent. Include:
+
+1. Clip metadata: stem, script path, scene class, canonical outputs.
+2. Purpose: what the clip should teach.
+3. Core message: the main idea in one or two paragraphs.
+4. Scene-by-scene storyboard: visual beats, equations, narration ideas, and transitions.
+5. Implementation notes: helper functions, visual constraints, and known choices.
+6. Render commands and review checklist.
+
+Keep the date-level project markdown high-level:
+
+1. Overall goal.
+2. Core logic of the full video.
+3. Clip index linking storyboards, scripts, and outputs.
+4. Planned sections/backlog.
+5. Current canonical artifacts.
+
+Before changing a Manim script, read or create the matching storyboard. After changing a clip's script or output names, update both the storyboard and the project-level clip index.
+
+## Environment
+
+Use the `py311` conda environment.
+
+Prefer `conda run` in automation:
+
+```bash
+conda run -n py311 python --version
+```
+
+Install missing packages into `py311` only when needed:
+
+```bash
+conda run -n py311 python -m pip install manim
+```
+
+Check scripts before rendering:
+
+```bash
+conda run -n py311 python -m py_compile YYYY-MM-DD/scripts/A01-score_intuition.py
+```
+
+## Render Commands
+
+Low-quality preview:
+
+```bash
+conda run -n py311 manim -ql --format mp4 \
+  --media_dir YYYY-MM-DD/video_outputs \
+  -o A01-score_intuition_480p \
+  YYYY-MM-DD/scripts/A01-score_intuition.py \
+  ScoreIntuition
+```
+
+720p deliverable:
+
+```bash
+conda run -n py311 manim -qm --format mp4 \
+  --media_dir YYYY-MM-DD/video_outputs \
+  -o A01-score_intuition_720p \
+  YYYY-MM-DD/scripts/A01-score_intuition.py \
+  ScoreIntuition
+```
+
+After rendering, copy the nested Manim MP4 to the canonical top-level output path if Manim did not write it there directly:
+
+```bash
+cp YYYY-MM-DD/video_outputs/videos/A01-score_intuition/720p30/A01-score_intuition_720p.mp4 \
+   YYYY-MM-DD/video_outputs/A01-score_intuition_720p.mp4
+```
+
+The exact nested folder may vary with the script stem and quality setting. Use `find YYYY-MM-DD/video_outputs -name '*.mp4'` if needed.
+
+## Verification
+
+Verify each rendered output before calling it done:
+
+```bash
+ls -lh YYYY-MM-DD/video_outputs/A01-score_intuition_720p.mp4
+```
+
+```bash
+conda run -n py311 python -c "import av; c=av.open('YYYY-MM-DD/video_outputs/A01-score_intuition_720p.mp4'); s=c.streams.video[0]; print('duration_sec', float(c.duration/1000000) if c.duration else 'unknown'); print('frames', s.frames); print('size', s.codec_context.width, s.codec_context.height); print('fps', float(s.average_rate))"
+```
+
+For a lightweight nonblank/corruption check, sample frames and confirm nonzero variance:
+
+```bash
+conda run -n py311 python -c "import av; p='YYYY-MM-DD/video_outputs/A01-score_intuition_720p.mp4'; c=av.open(p); targets={0,240,480}; vals=[]; [vals.append((i, float((a:=f.to_ndarray(format='rgb24')).mean()), float(a.std()))) for i, f in enumerate(c.decode(video=0)) if i in targets]; print(vals)"
+```
+
+## Concatenation Workflow
+
+Use the section/clip naming convention so lexical sort equals final-video order.
+
+Build a concat list only from top-level canonical outputs:
+
+```bash
+find YYYY-MM-DD/video_outputs -maxdepth 1 -type f -name '[A-Z][0-9][0-9]-*_720p.mp4' | sort
+```
+
+Create an ffmpeg concat list:
+
+```bash
+for f in YYYY-MM-DD/video_outputs/[A-Z][0-9][0-9]-*_720p.mp4; do
+  printf "file '%s'\n" "$(realpath "$f")"
+done > YYYY-MM-DD/video_outputs/concat_720p.txt
+```
+
+Concat without re-encoding when all clips share codec, resolution, frame rate, and audio layout:
+
+```bash
+ffmpeg -f concat -safe 0 \
+  -i YYYY-MM-DD/video_outputs/concat_720p.txt \
+  -c copy \
+  YYYY-MM-DD/video_outputs/final_720p.mp4
+```
+
+If stream-copy concat fails or clips differ, re-render or re-encode all clips to a common target, preferably `1280x720`, `30fps`, H.264 MP4.
+
+## Implementation Preferences
+
+1. Keep the first version of a date-specific Manim scene self-contained if the repo is small.
+2. Extract shared helpers only after multiple scripts need the same math/render code.
+3. Use NumPy for math and Manim for rendering.
+4. Prefer Manim `Text` for robustness when LaTeX is not required; use `MathTex` only when equation quality matters and LaTeX is available.
+5. Keep visual coordinate ranges, colors, and camera framing consistent across clips that will be concatenated.
+6. Avoid `-p` preview flags in automated runs; render files directly and report paths.
+7. Do not place unrelated generated caches in the canonical top-level output list.
+8. Hyphens in script filenames are acceptable when rendering by path with Manim; put importable shared helpers in valid Python module filenames such as `shared_helpers.py`.
