@@ -629,3 +629,143 @@ class ScoreIntuition(Scene):
             point[1] = np.clip(point[1], Y_RANGE[0] + 0.1, Y_RANGE[1] - 0.1)
             path.append(point.copy())
         return path
+
+
+class ScoreIntuitionScene1(ScoreIntuition):
+    def construct(self) -> None:
+        self.camera.background_color = "#10131a"
+
+        mean = np.array([1.0, 1.0])
+        sigma = 0.8
+        sample = np.array([2.15, 0.15])
+
+        title = Text(
+            "A probability landscape has an uphill direction",
+            font_size=34,
+            weight="BOLD",
+            color=WHITE,
+        ).to_edge(UP, buff=0.28)
+        subtitle = Text(
+            "Before the formula, look at one point on log p(x).",
+            font_size=23,
+            color=GRAY_A,
+        ).next_to(title, DOWN, buff=0.15)
+        title_group = VGroup(title, subtitle)
+
+        plane = self._make_plane()
+        plane.shift(DOWN * 0.1)
+
+        density = self._density_dots(
+            plane,
+            lambda p: gaussian_pdf(p, mean, sigma),
+            lambda _p: TEAL_C,
+            max_opacity=0.48,
+        )
+        contours = self._gaussian_log_contours(plane, mean, sigma)
+        contours.set_z_index(2)
+
+        center = self._mean_marker(plane, mean, "highest log p(x)", TEAL_A)
+        center.set_z_index(5)
+        low_label = Text("lower log p(x)", font_size=20, color=GRAY_B)
+        low_label.move_to(plane.c2p(-1.35, -1.75)).set_z_index(5)
+
+        self.play(FadeIn(title_group, shift=DOWN * 0.12), run_time=0.8)
+        self.play(Create(plane), run_time=0.75)
+        self.play(FadeIn(density, lag_ratio=0.015), run_time=1.0)
+        self.play(
+            LaggedStart(*[Create(ring) for ring in contours], lag_ratio=0.1),
+            FadeIn(center),
+            FadeIn(low_label, shift=DOWN * 0.08),
+            run_time=1.45,
+        )
+
+        map_caption = VGroup(
+            Text("Contour lines: same log-density", font_size=23, color=GRAY_A),
+            Text("Brighter means higher log p(x)", font_size=22, color=TEAL_A),
+        ).arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+        map_caption.to_corner(DOWN + LEFT, buff=0.35).set_z_index(6)
+        self.play(FadeIn(map_caption, shift=UP * 0.1), run_time=0.55)
+        self.wait(0.35)
+
+        sample_dot = Dot(plane.c2p(*sample), radius=0.08, color=YELLOW).set_z_index(6)
+        sample_label = Text("x", font_size=26, color=YELLOW).next_to(
+            sample_dot, DOWN + RIGHT, buff=0.08
+        )
+        question = Text(
+            "From here, which way goes uphill fastest?",
+            font_size=26,
+            color=WHITE,
+        )
+        question.to_edge(DOWN, buff=0.35).set_z_index(6)
+
+        self.play(FadeIn(sample_dot, scale=0.85), FadeIn(sample_label), run_time=0.55)
+        self.play(ReplacementTransform(map_caption, question), run_time=0.65)
+        self.wait(0.35)
+
+        radial_to_mean = mean - sample
+        tangent = np.array([-radial_to_mean[1], radial_to_mean[0]], dtype=float)
+        tangent /= np.linalg.norm(tangent) + EPS
+        local_contour = DashedLine(
+            plane.c2p(*(sample - 0.62 * tangent)),
+            plane.c2p(*(sample + 0.62 * tangent)),
+            color=GRAY_B,
+            dash_length=0.08,
+            stroke_width=2.4,
+        ).set_z_index(4)
+        contour_label = Text("local contour", font_size=19, color=GRAY_B).next_to(
+            local_contour, DOWN, buff=0.1
+        )
+
+        score_arrow = self._score_arrow(
+            plane,
+            sample,
+            gaussian_score(sample, mean, sigma),
+            color=YELLOW,
+            max_length=0.9,
+            stroke_width=7,
+        )
+        arrow_label = Text("uphill direction", font_size=22, color=YELLOW).next_to(
+            score_arrow, RIGHT, buff=0.12
+        )
+
+        self.play(Create(local_contour), FadeIn(contour_label), run_time=0.65)
+        self.play(
+            GrowArrow(score_arrow),
+            FadeIn(arrow_label, shift=RIGHT * 0.08),
+            run_time=0.85,
+        )
+        self.wait(0.45)
+
+        score_text = Text(
+            "This local uphill arrow is the score.",
+            font_size=27,
+            color=WHITE,
+        )
+        equation = Text("s(x) = ∇ₓ log p(x)", font_size=34, color=YELLOW)
+        equation_hint = Text(
+            "a direction attached to the point x",
+            font_size=21,
+            color=GRAY_A,
+        )
+        reveal_content = VGroup(score_text, equation, equation_hint).arrange(
+            DOWN, buff=0.16
+        )
+        reveal_backdrop = BackgroundRectangle(
+            reveal_content,
+            color="#10131a",
+            fill_opacity=0.82,
+            buff=0.16,
+        )
+        reveal = VGroup(reveal_backdrop, reveal_content)
+        reveal.to_edge(DOWN, buff=0.28).set_z_index(6)
+
+        self.play(
+            FadeOut(question),
+            FadeIn(reveal, shift=UP * 0.08),
+            arrow_label.animate.set_color(YELLOW),
+            contours.animate.set_stroke(opacity=0.5),
+            run_time=0.9,
+        )
+        box = SurroundingRectangle(equation, color=YELLOW, buff=0.11)
+        self.play(Create(box), run_time=0.45)
+        self.wait(1.4)

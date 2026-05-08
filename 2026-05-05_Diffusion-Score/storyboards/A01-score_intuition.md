@@ -29,47 +29,72 @@ The clip should answer:
 
 The score is:
 
-```tex
+$$
 s(x) = \nabla_x \log p(x)
-```
+$$
 
 For a Gaussian, `log p(x)` is highest at the mean and decreases as we move away. Its contour lines stay in the same 2D sample space as `x`, and the score arrow points perpendicular to those contours in the direction where log-density increases fastest.
 
 For:
 
-```tex
+$$
 p(x) = N(x; \mu, \sigma^2 I)
-```
+$$
 
 the log-density is:
 
-```tex
+$$
 \log p(x) = C - \frac{\|x-\mu\|^2}{2\sigma^2}
-```
+$$
 
 and the score is:
 
-```tex
+$$
 s(x) = \nabla_x \log p(x) = -\frac{x-\mu}{\sigma^2}
-```
+$$
 
 ## Storyboard
 
-### Scene 1: Title and Equation
+### Scene 1: A Probability Landscape Has an Uphill Direction
 
-Purpose: introduce the definition without treating it as abstract notation.
+Purpose: introduce the score visually before showing the equation.
 
-Visuals:
+The viewer should first see a scalar landscape over 2D sample space, then see that every location has a local "uphill" direction. The score equation should feel like the name for this visual idea, not like an abstract formula introduced too early.
 
-1. Display the title: "Score = gradient of log-density."
-2. Show the equation `s(x) = ∇ₓ log p(x)`.
-3. Highlight `log p(x)` first.
-4. Highlight `∇ₓ` second.
-5. End with the full score expression highlighted.
+Beginner-friendly storyline:
+
+1. Start with a 2D coordinate plane.
+2. Fade in a simple Gaussian probability landscape using soft color and contour lines.
+3. Label the center as "highest log p(x)" or "most likely region."
+4. Place one point `x` away from the center on a lower contour.
+5. Pose the visual question: "From here, which direction moves uphill fastest?"
+6. Draw one arrow from `x` toward higher `log p(x)`, perpendicular to the nearby contour.
+7. Reveal the label: "This local uphill arrow is the score."
+8. Only after the arrow is clear, show the equation:
+
+$$
+s(x) = \nabla_x \log p(x)
+$$
+
+Visual design:
+
+1. Treat the contour lines as a topographic map of `log p(x)`.
+2. Use brighter or warmer color near the Gaussian center to mean higher `log p(x)`.
+3. Keep the scene in 2D; do not switch to a 3D surface.
+4. Do not show a full vector field yet. Scene 1 should focus on one point and one local uphill arrow.
+5. Keep `sigma` out of this first scene unless needed visually. The first goal is direction, not magnitude.
 
 Narration idea:
 
-"Before diffusion models, start with a distribution. The score is what you get when you differentiate its log-density with respect to the sample position."
+"Imagine `log p(x)` as a height map over the plane. The center is high; farther away is lower. If we stand at this point, the score asks: which direction goes uphill fastest? That local uphill direction is the gradient of log-probability."
+
+Key message:
+
+The score is not the probability value. It is a direction attached to a point in sample space:
+
+$$
+s(x) = \nabla_x \log p(x)
+$$
 
 ### Scene 2: Visualize `log p(x)` in 2D
 

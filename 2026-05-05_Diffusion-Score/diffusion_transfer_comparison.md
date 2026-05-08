@@ -33,7 +33,8 @@ The common thread:
 
 | Clip                | Purpose                                                                  | Storyboard                           | Script                           | Output                                       | Status   |
 | ------------------- | ------------------------------------------------------------------------ | ------------------------------------ | -------------------------------- | -------------------------------------------- | -------- |
-| A01-score_intuition | Introduce `log p(x)` as 2D contours, then show score as the gradient field and bridge to generation. | `storyboards/A01-score_intuition.md` | `scripts/A01-score_intuition.py` | `video_outputs/A01-score_intuition_720p.mp4` | Rendered |
+| A01-score_intuition | Introduce `log p(x)` as 2D contours, then show score as the gradient field and bridge to generation. | `storyboards/A01-score_intuition.md` | `scripts/A01-score_intuition.py` | `video_outputs/A01-score_intuition_720p.mp4` | Parked |
+| B01-ve_score_construction | Show VE's one-point score construction by adding Gaussian noise at increasing `sigma` levels. | `storyboards/B01-ve_score_construction.md` | `scripts/B01-ve_score_construction.py` | `video_outputs/B01-ve_score_construction_720p.mp4` | Draft rendered |
 
 
 ## Planned Video Structure
@@ -42,19 +43,30 @@ The common thread:
 
 Goal: establish the visual language.
 
+Current status: parked. Do not continue building Section A until the opening score-intuition manuscript is revisited.
+
 1. `A01-score_intuition`: show `log p(x)` contours for one Gaussian, derive one score arrow, expand to a full score field, then bridge to a mixture-field generation sketch.
 2. Possible next clip: score fields across noise levels.
 
-### Section B: VE Diffusion
+### Section B: how to construct the score field? VE Diffusion version.
 
-Goal: show variance exploding diffusion.
+Goal: show VE's way to construct the score field.
 
-High-level idea:
+Current draft:
 
-1. Start from clean data.
-2. Add increasingly large Gaussian noise.
-3. Show the reverse direction as broad noise contracting toward data modes.
-4. Overlay score fields at several noise levels.
+1. `B01-ve_score_construction`: simplify the data distribution to one clean point `x0`.
+2. Add Gaussian noise: `x_sigma = x0 + sigma epsilon`.
+3. Show that each noisy point `P` gives a reverse score direction back toward `x0`.
+4. Increase `sigma` to show wider spatial coverage.
+5. Show the inward score field for one noise level.
+6. Animate reverse motion from broad noise back to the clean point.
+
+Important framing:
+
+1. This is the conditional score around one clean point, not yet the full data score over a multi-point distribution.
+2. Larger `sigma` gives broader coverage; the reverse field at each noise level points back toward higher conditional density.
+3. Later clips can generalize from one point to many data samples or compare against VP and flow matching.
+
 
 ### Section C: VP Diffusion
 
@@ -94,11 +106,15 @@ Source:
 
 1. `2026-05-05_Diffusion-Score/storyboards/A01-score_intuition.md`
 2. `2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py`
+3. `2026-05-05_Diffusion-Score/storyboards/B01-ve_score_construction.md`
+4. `2026-05-05_Diffusion-Score/scripts/B01-ve_score_construction.py`
 
 Rendered outputs:
 
 1. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_720p.mp4`
 2. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_480p.mp4`
+3. `2026-05-05_Diffusion-Score/video_outputs/B01-ve_score_construction_720p.mp4`
+4. `2026-05-05_Diffusion-Score/video_outputs/B01-ve_score_construction_480p.mp4`
 
 Render commands:
 
@@ -108,4 +124,12 @@ conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05_Diffusion-Score
 
 ```bash
 conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o A01-score_intuition_480p 2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py ScoreIntuition
+```
+
+```bash
+conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o B01-ve_score_construction_720p 2026-05-05_Diffusion-Score/scripts/B01-ve_score_construction.py VEScoreConstruction
+```
+
+```bash
+conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o B01-ve_score_construction_480p 2026-05-05_Diffusion-Score/scripts/B01-ve_score_construction.py VEScoreConstruction
 ```
