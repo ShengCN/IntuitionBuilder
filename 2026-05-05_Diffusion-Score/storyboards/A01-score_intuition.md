@@ -4,211 +4,187 @@
 
 Stem: `A01-score_intuition`
 
-Script: `2026-05-05/scripts/A01-score_intuition.py`
+Script: `2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py`
 
 Scene class: `ScoreIntuition`
 
 Canonical outputs:
 
-1. `2026-05-05/video_outputs/A01-score_intuition_720p.mp4`
-2. `2026-05-05/video_outputs/A01-score_intuition_480p.mp4`
+1. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_720p.mp4`
+2. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_480p.mp4`
 
 ## Purpose
 
-Introduce the score as the local direction where log-density increases fastest, then show how that field intuition becomes the bridge to diffusion-style generation.
+Introduce score as the gradient of log-density, not as a black-box diffusion formula. The viewer should first see `log p(x)` for a simple 2D Gaussian, then see that taking a derivative of this scalar landscape produces a vector field.
 
 The clip should answer:
 
-1. What is the score?
-2. What does the score look like for a single Gaussian?
-3. What does the score look like for a two-Gaussian data distribution?
-4. Why does this field view naturally lead to generative dynamics?
+1. What does `log p(x)` look like for a 2D Gaussian?
+2. What does it mean to take `∇ₓ log p(x)`?
+3. What does the score look like at one point?
+4. What does the full score field look like?
+5. How does this field view connect to generation?
 
 ## Core Message
 
 The score is:
 
 ```tex
-s_t(x) = \nabla_x \log p_t(x)
+s(x) = \nabla_x \log p(x)
 ```
 
-It is not the probability itself. It is the local direction in x-space where log-density increases fastest.
+For a Gaussian, `log p(x)` is highest at the mean and decreases as we move away. Its contour lines stay in the same 2D sample space as `x`, and the score arrow points perpendicular to those contours in the direction where log-density increases fastest.
 
-Generation can be visualized as moving noisy samples through fields that point them toward higher-density structure.
-
-## Storyboard
-
-### Scene 1: Title and Thesis
-
-Purpose: establish the core intuition.
-
-Visuals:
-
-1. Display the title: "The score points toward higher probability."
-2. Show the equation:
-
-```tex
-s_t(x) = \nabla_x \log p_t(x)
-```
-
-3. Highlight `\log p_t(x)` first, then `\nabla_x`, then the whole score.
-4. Add the explanatory text: "local direction where log-density increases fastest."
-
-Narration idea:
-
-"The score is not the probability itself. It is the local direction in x-space where log-density increases fastest."
-
-### Scene 2: Single Example Point
-
-Purpose: make the score concrete before showing a full field.
-
-Setup:
-
-1. Use a 2D coordinate plane.
-2. Place a Gaussian density centered at `(1, 1)`.
-3. Pick one sample point away from the center.
-4. Draw an arrow from that point in the score direction.
-
-Math:
+For:
 
 ```tex
 p(x) = N(x; \mu, \sigma^2 I)
 ```
 
+the log-density is:
+
 ```tex
-\nabla_x \log p(x) = -\frac{x - \mu}{\sigma^2}
+\log p(x) = C - \frac{\|x-\mu\|^2}{2\sigma^2}
 ```
 
-Visual steps:
+and the score is:
 
-1. Show the center `(1, 1)`.
-2. Show the sample point `x`.
-3. Draw the vector from the point toward the center.
-4. Show that smaller `sigma` creates a larger score magnitude.
+```tex
+s(x) = \nabla_x \log p(x) = -\frac{x-\mu}{\sigma^2}
+```
 
-### Scene 3: Full Score Field for One Gaussian
+## Storyboard
 
-Purpose: show that every point in space has a score.
+### Scene 1: Title and Equation
+
+Purpose: introduce the definition without treating it as abstract notation.
 
 Visuals:
 
-1. Fade in many arrows over a grid.
-2. Arrows point toward `(1, 1)`.
-3. Use a soft density-dot background.
-4. Move the sample point along a path suggested by the field.
+1. Display the title: "Score = gradient of log-density."
+2. Show the equation `s(x) = ∇ₓ log p(x)`.
+3. Highlight `log p(x)` first.
+4. Highlight `∇ₓ` second.
+5. End with the full score expression highlighted.
+
+Narration idea:
+
+"Before diffusion models, start with a distribution. The score is what you get when you differentiate its log-density with respect to the sample position."
+
+### Scene 2: Visualize `log p(x)` in 2D
+
+Purpose: make the scalar field concrete before showing arrows.
+
+Visuals:
+
+1. Use a 2D coordinate plane.
+2. Place a Gaussian center at `mu = (1, 1)`.
+3. Draw contour rings for `log p(x)`.
+4. Use warmer/brighter contour rings near the center to indicate higher log-density.
+5. Add a label: "higher log p(x)" near the center and "lower log p(x)" farther away.
+
+Design decision:
+
+Use contour lines instead of a 3D surface. The score lives in the same 2D sample space as `x`; contours make the gradient direction visually clear without switching camera geometry.
+
+### Scene 3: Take the Derivative at One Point
+
+Purpose: show that score is the local direction of fastest increase.
+
+Visuals:
+
+1. Pick one point `x` away from the Gaussian mean.
+2. Mark the point on a lower log-density contour.
+3. Draw a dashed guide from `x` toward the mean.
+4. Draw the score arrow at `x`, pointing inward and perpendicular to the nearby contour.
+5. Reveal the Gaussian formulas:
+   - `log p(x) = C - ||x - mu||^2 / (2 sigma^2)`
+   - `s(x) = -(x - mu) / sigma^2`
+
+Narration idea:
+
+"At this point, the fastest way to increase log-density is to move inward. For a Gaussian, the derivative is exactly a vector back toward the mean."
+
+### Scene 4: Full Gaussian Score Field
+
+Purpose: scale the one-point derivative to the whole plane.
+
+Visuals:
+
+1. Fade in score arrows across a grid.
+2. Keep the contour rings visible underneath.
+3. Show that every arrow points toward the mean.
+4. Animate the sample point moving a few steps along the field.
 
 Key detail:
 
-Normalize arrow length for visual readability while preserving true magnitude for color or animation decisions when useful.
+Normalize arrow lengths for readability, but preserve the direction exactly.
 
-### Scene 4: Two-Gaussian Data Distribution
+### Scene 5: Bridge to Generation
 
-Purpose: move from a single mode to a simple data distribution.
-
-Distribution:
-
-1. Gaussian A:
-   - mean `(1, 1)`
-   - sigma `0.35`
-   - color teal
-2. Gaussian B:
-   - mean `(-1, -1)`
-   - sigma `0.65`
-   - color orange
-3. Mixture weights:
-   - `0.5 / 0.5`
+Purpose: connect score fields to generative dynamics without overloading the first clip.
 
 Visuals:
 
-1. Show two density blobs with different widths.
-2. Render the score field of the mixture.
-3. Mark the tight and wide modes.
-4. Emphasize that mixture arrows follow `grad p(x) / p(x)`, not simply the nearest mean.
-
-Math:
-
-```tex
-p(x) = w_1 N(x; \mu_1, \sigma_1^2 I) + w_2 N(x; \mu_2, \sigma_2^2 I)
-```
-
-```tex
-\nabla_x \log p(x) = \frac{\nabla_x p(x)}{p(x)}
-```
-
-For the mixture:
-
-```tex
-\nabla_x p(x) =
-w_1 N_1(x) \left(-\frac{x - \mu_1}{\sigma_1^2}\right)
-+ w_2 N_2(x) \left(-\frac{x - \mu_2}{\sigma_2^2}\right)
-```
-
-### Scene 5: Bridge to Generative Dynamics
-
-Purpose: connect score fields to diffusion-based generation.
-
-Visuals:
-
-1. Start points from broad noise.
-2. Use small animated steps following the mixture field.
-3. Let points drift toward high-density regions.
-4. End with the same two-mode data distribution.
+1. Introduce a two-Gaussian data distribution.
+2. Show the corresponding score field.
+3. Start several noisy points from broad locations.
+4. Animate them moving through the field toward higher-density regions.
 
 Message:
 
-"Once we can estimate the right vector field at each noise level, generation becomes the problem of moving samples through these fields."
+"Once we can estimate the right field at each noise level, generation becomes the problem of moving samples through these fields."
 
-This scene stays conceptual. Detailed VE, VP, and flow matching comparisons belong in later clips.
+Detailed VE, VP, and flow matching comparisons belong in later clips.
 
 ## Implementation Notes
 
 Use a self-contained Manim script for this first clip.
 
-Math helpers:
+Required helpers:
 
 1. `gaussian_pdf(x, mean, sigma)`
-2. `gaussian_score(x, mean, sigma)`
-3. `mixture_pdf(x, components)`
-4. `mixture_score(x, components)`
-5. `display_vector(vector, max_length)`
-6. `field_step(point, components)`
+2. `gaussian_log_pdf(x, mean, sigma)`
+3. `gaussian_score(x, mean, sigma)`
+4. `mixture_pdf(x, components)`
+5. `mixture_score(x, components)`
+6. `display_vector(vector, max_length)`
+7. `field_step(point, components)`
+8. Contour rendering helper for circular Gaussian log-density contours.
 
-Rendering helpers:
+Equation rendering:
 
-1. Consistent `NumberPlane`.
-2. Density-dot background.
-3. Mean markers.
-4. Score arrows over a grid.
-5. Sample path animation.
+1. Do not use `MathTex` unless LaTeX is installed.
+2. Current environment does not have `latex` or `dvisvgm`.
+3. Render equations with Manim `Text` and Unicode math symbols, for example `s(x) = ∇ₓ log p(x)`, so the output video does not display broken LaTeX.
 
 Design choices:
 
 1. Use NumPy for math and Manim for rendering.
-2. Use Manim `Text` instead of `MathTex` to avoid requiring LaTeX.
+2. Keep everything in 2D for A01.
 3. Keep the coordinate range fixed at roughly `[-3, 3] x [-3, 3]`.
-4. Keep arrows sparse enough that the score field remains readable.
-5. Use teal/orange for the two modes and yellow for emphasized sample paths.
+4. Use contours for `log p(x)` and arrows for `s(x)`.
+5. Use teal for the primary Gaussian, orange for the second mode, and yellow for emphasized sample paths.
 
 ## Render Commands
 
 720p deliverable:
 
 ```bash
-conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05/video_outputs -o A01-score_intuition_720p 2026-05-05/scripts/A01-score_intuition.py ScoreIntuition
+conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o A01-score_intuition_720p 2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py ScoreIntuition
 ```
 
 480p preview:
 
 ```bash
-conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05/video_outputs -o A01-score_intuition_480p 2026-05-05/scripts/A01-score_intuition.py ScoreIntuition
+conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o A01-score_intuition_480p 2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py ScoreIntuition
 ```
 
 ## Review Checklist
 
-1. Equation is readable.
-2. Arrows do not visually clutter the plane.
-3. The single-point example is obvious.
-4. The two Gaussian modes are visually distinct.
-5. The bridge to generation is intuitive without overclaiming.
+1. The score equation uses a real gradient symbol, not broken LaTeX or plain `grad_x`.
+2. `log p(x)` is visible as 2D contours before score arrows appear.
+3. The one-point score arrow is visibly perpendicular to the contour and points toward higher log-density.
+4. The full score field is readable.
+5. The bridge to generation is intuitive without explaining VE/VP/flow matching yet.
 6. Render time is acceptable.
-

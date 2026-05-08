@@ -28,6 +28,15 @@ def gaussian_pdf(points: np.ndarray, mean: np.ndarray, sigma: float) -> np.ndarr
     return np.exp(-0.5 * norm_sq / variance) / (2.0 * np.pi * variance)
 
 
+def gaussian_log_pdf(points: np.ndarray, mean: np.ndarray, sigma: float) -> np.ndarray:
+    points = np.asarray(points, dtype=float)
+    mean = np.asarray(mean, dtype=float)
+    diff = points - mean
+    norm_sq = np.sum(diff * diff, axis=-1)
+    variance = sigma * sigma
+    return -0.5 * norm_sq / variance - np.log(2.0 * np.pi * variance)
+
+
 def gaussian_score(points: np.ndarray, mean: np.ndarray, sigma: float) -> np.ndarray:
     points = np.asarray(points, dtype=float)
     mean = np.asarray(mean, dtype=float)
@@ -81,13 +90,6 @@ class ScoreIntuition(Scene):
     def construct(self) -> None:
         self.camera.background_color = "#10131a"
 
-        intro_group = self._show_score_equation()
-        self.play(FadeOut(intro_group, shift=UP * 0.25), run_time=0.8)
-
-        plane = self._make_plane()
-        header = self._make_header("A score field in 2D")
-        self.play(FadeIn(header), Create(plane), run_time=1.2)
-
         mean = np.array([1.0, 1.0])
         single_sigma = 0.8
         components = [
@@ -95,14 +97,32 @@ class ScoreIntuition(Scene):
             GaussianComponent(0.5, np.array([-1.0, -1.0]), 0.65, ORANGE),
         ]
 
-        one_density, one_center, sample_dot, sample_arrow, sigma_label = (
-            self._show_single_point_score(plane, mean, single_sigma, header)
+        intro_group = self._show_score_equation()
+        self.play(FadeOut(intro_group, shift=UP * 0.25), run_time=0.8)
+
+        plane = self._make_plane()
+        header = self._make_header("First visualize log p(x)")
+        self.play(FadeIn(header), Create(plane), run_time=1.2)
+
+        contours, center, log_caption = self._show_log_density_contours(
+            plane, mean, single_sigma, header
+        )
+        sample_dot, score_arrow, local_annotations = self._show_one_point_derivative(
+            plane, mean, single_sigma, header, log_caption
         )
         single_field = self._show_single_gaussian_field(
-            plane, mean, single_sigma, one_density, one_center, sample_dot, sample_arrow
+            plane,
+            mean,
+            single_sigma,
+            contours,
+            center,
+            sample_dot,
+            score_arrow,
+            local_annotations,
+            header,
         )
         mixture_density, mixture_field, mode_marks = self._show_mixture_field(
-            plane, components, header, one_density, single_field, one_center, sigma_label
+            plane, components, header, contours, single_field, center
         )
         self._show_generation_bridge(
             plane, components, mixture_density, mixture_field, mode_marks, header
@@ -118,131 +138,196 @@ class ScoreIntuition(Scene):
 
     def _show_score_equation(self) -> VGroup:
         title = Text(
-            "The score points toward higher probability",
-            font_size=40,
+            "Score = gradient of log-density",
+            font_size=42,
             weight="BOLD",
             color=WHITE,
         )
-        score = Text("s_t(x)", font_size=46, color=YELLOW)
-        equals = Text("=", font_size=46, color=WHITE)
-        grad = Text("grad_x", font_size=46, color=BLUE_B)
-        logp = Text("log p_t(x)", font_size=46, color=TEAL_B)
+        score = Text("s(x)", font_size=48, color=YELLOW)
+        equals = Text("=", font_size=48, color=WHITE)
+        grad = Text("∇ₓ", font_size=48, color=BLUE_B)
+        logp = Text("log p(x)", font_size=48, color=TEAL_B)
         equation = VGroup(score, equals, grad, logp).arrange(RIGHT, buff=0.16)
         subtitle = Text(
-            "local direction where log-density increases fastest",
+            "differentiate a scalar log-density landscape",
             font_size=26,
             color=GRAY_B,
         )
 
         group = VGroup(title, equation, subtitle).arrange(DOWN, buff=0.42)
         group.move_to(ORIGIN)
+
         self.play(Write(title), run_time=1.0)
         self.play(FadeIn(equation, shift=UP * 0.2), run_time=0.9)
         log_box = SurroundingRectangle(logp, color=TEAL_B, buff=0.08)
         grad_box = SurroundingRectangle(grad, color=BLUE_B, buff=0.08)
         score_box = SurroundingRectangle(equation, color=YELLOW, buff=0.12)
         self.play(Create(log_box), FadeIn(subtitle), run_time=0.8)
-        self.wait(0.45)
-        self.play(ReplacementTransform(log_box, grad_box), run_time=0.65)
         self.wait(0.35)
+        self.play(ReplacementTransform(log_box, grad_box), run_time=0.65)
+        self.wait(0.3)
         self.play(ReplacementTransform(grad_box, score_box), run_time=0.65)
-        self.wait(0.6)
+        self.wait(0.55)
         self.play(FadeOut(score_box), run_time=0.35)
         return group
 
-    def _show_single_point_score(
+    def _show_log_density_contours(
         self,
         plane: NumberPlane,
         mean: np.ndarray,
         sigma: float,
         header: VGroup,
-    ) -> tuple[VGroup, VGroup, Dot, Arrow, Text]:
-        new_header = self._make_header("One Gaussian: a local arrow back to the mean")
+    ) -> tuple[VGroup, VGroup, VGroup]:
+        new_header = self._make_header("A 2D Gaussian defines log p(x) everywhere")
         self.play(Transform(header, new_header), run_time=0.6)
 
-        density = self._density_dots(
-            plane,
-            lambda p: gaussian_pdf(p, mean, sigma),
-            lambda _p: TEAL_C,
-            max_opacity=0.55,
+        contours = self._gaussian_log_contours(plane, mean, sigma)
+        center = self._mean_marker(plane, mean, "mean μ", TEAL_C)
+        high_label = Text("higher log p(x)", font_size=21, color=TEAL_A).next_to(
+            center, UP + RIGHT, buff=0.28
+        ).set_z_index(6)
+        low_label = Text("lower log p(x)", font_size=21, color=GRAY_B).move_to(
+            plane.c2p(-1.6, -1.95)
+        ).set_z_index(6)
+        caption = VGroup(
+            Text("log p(x) is a scalar landscape over the 2D plane", font_size=24, color=GRAY_A),
+            Text("contours connect points with equal log-density", font_size=22, color=GRAY_B),
+        ).arrange(DOWN, buff=0.14).to_edge(DOWN, buff=0.3).set_z_index(6)
+
+        self.play(
+            LaggedStart(*[Create(ring) for ring in contours], lag_ratio=0.12),
+            FadeIn(center),
+            run_time=1.5,
         )
-        center = self._mean_marker(plane, mean, "mean (1, 1)", TEAL_C)
+        self.play(
+            FadeIn(high_label, shift=UP * 0.12),
+            FadeIn(low_label, shift=DOWN * 0.12),
+            FadeIn(caption, shift=UP * 0.12),
+            run_time=0.8,
+        )
+        self.wait(0.8)
+        return contours, VGroup(center, high_label, low_label), caption
+
+    def _show_one_point_derivative(
+        self,
+        plane: NumberPlane,
+        mean: np.ndarray,
+        sigma: float,
+        header: VGroup,
+        old_caption: VGroup,
+    ) -> tuple[Dot, Arrow, VGroup]:
+        new_header = self._make_header("The score is the derivative at one point")
+        self.play(Transform(header, new_header), FadeOut(old_caption), run_time=0.6)
+
         sample = np.array([2.15, 0.15])
-        sample_dot = Dot(plane.c2p(*sample), radius=0.075, color=YELLOW).set_z_index(4)
-        sample_label = Text("x", font_size=24, color=YELLOW).next_to(
+        sample_dot = Dot(plane.c2p(*sample), radius=0.075, color=YELLOW).set_z_index(5)
+        sample_label = Text("x", font_size=25, color=YELLOW).next_to(
             sample_dot, DOWN + RIGHT, buff=0.08
         )
-        sample_group = VGroup(sample_dot, sample_label)
 
-        arrow = self._score_arrow(
+        radial_to_mean = mean - sample
+        tangent = np.array([-radial_to_mean[1], radial_to_mean[0]], dtype=float)
+        tangent /= np.linalg.norm(tangent) + EPS
+        tangent_line = DashedLine(
+            plane.c2p(*(sample - 0.62 * tangent)),
+            plane.c2p(*(sample + 0.62 * tangent)),
+            color=GRAY_B,
+            dash_length=0.08,
+            stroke_width=2.2,
+        ).set_z_index(2)
+        guide = DashedLine(
+            plane.c2p(*sample),
+            plane.c2p(*mean),
+            color=TEAL_B,
+            dash_length=0.08,
+            stroke_width=2.4,
+        ).set_opacity(0.65)
+        tangent_label = Text("local contour", font_size=20, color=GRAY_B).next_to(
+            tangent_line, DOWN, buff=0.12
+        )
+
+        score_arrow = self._score_arrow(
             plane,
             sample,
             gaussian_score(sample, mean, sigma),
             color=YELLOW,
-            max_length=0.72,
+            max_length=0.82,
             stroke_width=7,
         )
-        arrow_label = Text(
-            "score at x",
-            font_size=22,
-            color=YELLOW,
-        ).next_to(arrow, RIGHT, buff=0.12)
-        sigma_label = Text(
-            "For a Gaussian: score = -(x - mean) / sigma^2",
-            font_size=24,
-            color=GRAY_A,
-        ).to_edge(DOWN, buff=0.35)
-
-        self.play(FadeIn(density, lag_ratio=0.02), FadeIn(center), run_time=1.1)
-        self.play(FadeIn(sample_group, scale=0.85), run_time=0.5)
-        self.play(GrowArrow(arrow), FadeIn(arrow_label), run_time=0.8)
-        self.play(FadeIn(sigma_label, shift=UP * 0.12), run_time=0.6)
-
-        tighter_arrow = self._score_arrow(
-            plane,
-            sample,
-            gaussian_score(sample, mean, 0.52),
-            color=RED_B,
-            max_length=1.05,
-            stroke_width=7,
+        arrow_label = Text("s(x)", font_size=24, color=YELLOW).next_to(
+            score_arrow, RIGHT, buff=0.1
         )
-        tighter_label = Text(
-            "smaller sigma, larger magnitude",
-            font_size=22,
-            color=RED_B,
-        ).next_to(tighter_arrow, RIGHT, buff=0.1)
+        derivative_caption = VGroup(
+            Text("s(x) = ∇ₓ log p(x)", font_size=26, color=YELLOW),
+            Text("gradient points toward fastest increase of log p(x)", font_size=22, color=GRAY_A),
+        ).arrange(DOWN, buff=0.15).to_edge(DOWN, buff=0.3)
+
+        formula = VGroup(
+            Text("Gaussian log-density:", font_size=21, color=GRAY_B),
+            Text("log p(x) = C − ||x − μ||² / (2σ²)", font_size=24, color=TEAL_A),
+            Text("s(x) = −(x − μ) / σ²", font_size=24, color=YELLOW),
+        ).arrange(DOWN, buff=0.12, aligned_edge=LEFT)
+        formula.to_corner(DOWN + LEFT, buff=0.35)
+
+        self.play(FadeIn(sample_dot), FadeIn(sample_label), run_time=0.5)
+        self.play(Create(tangent_line), FadeIn(tangent_label), run_time=0.65)
+        self.play(Create(guide), FadeIn(derivative_caption, shift=UP * 0.12), run_time=0.7)
+        self.play(GrowArrow(score_arrow), FadeIn(arrow_label), run_time=0.85)
+        self.wait(0.5)
         self.play(
-            Transform(arrow, tighter_arrow),
-            Transform(arrow_label, tighter_label),
+            ReplacementTransform(derivative_caption, formula),
             run_time=0.8,
         )
-        self.wait(0.55)
-        self.play(FadeOut(arrow_label), FadeOut(sample_label), run_time=0.35)
-        return density, center, sample_dot, arrow, sigma_label
+        self.wait(0.7)
+        local_annotations = VGroup(
+            sample_label,
+            tangent_line,
+            tangent_label,
+            guide,
+            arrow_label,
+            formula,
+        )
+        return sample_dot, score_arrow, local_annotations
 
     def _show_single_gaussian_field(
         self,
         plane: NumberPlane,
         mean: np.ndarray,
         sigma: float,
-        density: VGroup,
+        contours: VGroup,
         center: VGroup,
         sample_dot: Dot,
         sample_arrow: Arrow,
+        local_annotations: VGroup,
+        header: VGroup,
     ) -> VGroup:
-        field_label = Text(
-            "Every point has its own score.",
-            font_size=28,
-            color=WHITE,
-        ).to_edge(DOWN, buff=0.35)
+        new_header = self._make_header("Repeat the derivative across the plane")
+        self.play(Transform(header, new_header), run_time=0.6)
+
         field = self._vector_field(
             plane,
             lambda p: gaussian_score(p, mean, sigma),
             base_color=BLUE_B,
             max_length=0.38,
         )
-        self.play(FadeOut(sample_arrow), FadeIn(field_label), run_time=0.5)
-        self.play(LaggedStart(*[GrowArrow(a) for a in field], lag_ratio=0.015), run_time=1.8)
+        field_label = Text(
+            "Every point gets a score vector.",
+            font_size=25,
+            color=GRAY_A,
+        ).to_edge(DOWN, buff=0.3)
+
+        self.play(
+            FadeOut(sample_arrow),
+            FadeOut(local_annotations),
+            FadeIn(field_label, shift=UP * 0.12),
+            run_time=0.55,
+        )
+        self.play(
+            LaggedStart(*[GrowArrow(arrow) for arrow in field], lag_ratio=0.014),
+            contours.animate.set_opacity(0.42),
+            center.animate.set_opacity(0.9),
+            run_time=1.8,
+        )
 
         path_points = [
             np.array([2.15, 0.15]),
@@ -264,12 +349,11 @@ class ScoreIntuition(Scene):
         plane: NumberPlane,
         components: list[GaussianComponent],
         header: VGroup,
-        old_density: VGroup,
+        old_contours: VGroup,
         old_field: VGroup,
         old_center: VGroup,
-        old_bottom_label: Text,
     ) -> tuple[VGroup, VGroup, VGroup]:
-        new_header = self._make_header("Two modes: the score follows the log mixture")
+        new_header = self._make_header("A data distribution has a richer score field")
         self.play(Transform(header, new_header), run_time=0.6)
 
         density = self._density_dots(
@@ -290,22 +374,26 @@ class ScoreIntuition(Scene):
             self._mean_marker(plane, components[1].mean, "wide mode", components[1].color),
         )
         formula = Text(
-            "mixture score = grad p(x) / p(x), not just nearest mean",
+            "mixture score = ∇ₓ log p(x) = ∇ₓ p(x) / p(x)",
             font_size=23,
             color=GRAY_A,
-        ).to_edge(DOWN, buff=0.35)
+        ).to_edge(DOWN, buff=0.32)
 
         self.play(
+            FadeOut(old_contours),
+            FadeOut(old_field),
             FadeOut(old_center),
-            FadeOut(old_bottom_label),
-            Transform(old_density, density),
-            Transform(old_field, field),
-            run_time=1.3,
+            run_time=0.6,
         )
-        self.play(FadeIn(mode_marks), FadeIn(formula, shift=UP * 0.12), run_time=0.7)
-        self.wait(1.0)
+        self.play(FadeIn(density, lag_ratio=0.02), FadeIn(mode_marks), run_time=1.0)
+        self.play(
+            LaggedStart(*[GrowArrow(arrow) for arrow in field], lag_ratio=0.01),
+            FadeIn(formula, shift=UP * 0.12),
+            run_time=1.6,
+        )
+        self.wait(0.8)
         self.play(FadeOut(formula), run_time=0.35)
-        return old_density, old_field, mode_marks
+        return density, field, mode_marks
 
     def _show_generation_bridge(
         self,
@@ -316,7 +404,7 @@ class ScoreIntuition(Scene):
         mode_marks: VGroup,
         header: VGroup,
     ) -> None:
-        new_header = self._make_header("Generation: move noisy samples through a field")
+        new_header = self._make_header("Generation: move noisy samples through fields")
         self.play(Transform(header, new_header), run_time=0.6)
 
         rng = np.random.default_rng(13)
@@ -367,15 +455,15 @@ class ScoreIntuition(Scene):
 
     def _make_header(self, text: str) -> VGroup:
         title = Text(text, font_size=27, color=WHITE, weight="BOLD")
-        equation = Text("s_t(x) = grad_x log p_t(x)", font_size=22, color=YELLOW)
+        equation = Text("s(x) = ∇ₓ log p(x)", font_size=22, color=YELLOW)
         return VGroup(title, equation).arrange(RIGHT, buff=0.55).to_edge(UP, buff=0.24)
 
     def _make_plane(self) -> NumberPlane:
         plane = NumberPlane(
             x_range=[X_RANGE[0], X_RANGE[1], 1],
             y_range=[Y_RANGE[0], Y_RANGE[1], 1],
-            x_length=7.4,
-            y_length=5.75,
+            x_length=5.85,
+            y_length=5.85,
             background_line_style={
                 "stroke_color": "#334155",
                 "stroke_width": 1,
@@ -397,6 +485,37 @@ class ScoreIntuition(Scene):
         ring = Circle(radius=0.17, color=color, stroke_width=3).move_to(dot)
         text = Text(label, font_size=19, color=color).next_to(dot, UP + RIGHT, buff=0.08)
         return VGroup(ring, dot, text)
+
+    def _gaussian_log_contours(
+        self, plane: NumberPlane, mean: np.ndarray, sigma: float
+    ) -> VGroup:
+        radii = [0.45, 0.85, 1.25, 1.43, 1.85, 2.25]
+        rings = []
+        for index, radius in enumerate(radii):
+            alpha = 1.0 - index / max(1, len(radii) - 1)
+            color = interpolate_color(BLUE_E, TEAL_A, alpha)
+            ring = self._coordinate_circle(plane, mean, radius)
+            stroke_opacity = 0.38 + 0.38 * alpha
+            stroke_width = 3.0 if radius == 1.43 else 2.4
+            ring.set_stroke(color=color, width=stroke_width, opacity=stroke_opacity)
+            ring.set_fill(opacity=0.0)
+            ring.set_z_index(1)
+            rings.append(ring)
+        return VGroup(*rings)
+
+    def _coordinate_circle(
+        self,
+        plane: NumberPlane,
+        center: np.ndarray,
+        radius: float,
+        samples: int = 160,
+    ) -> VMobject:
+        angles = np.linspace(0.0, TAU, samples)
+        points = [
+            plane.c2p(center[0] + radius * np.cos(angle), center[1] + radius * np.sin(angle))
+            for angle in angles
+        ]
+        return VMobject().set_points_smoothly(points).set_fill(opacity=0.0)
 
     def _density_dots(
         self,

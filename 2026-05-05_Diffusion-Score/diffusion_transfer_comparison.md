@@ -4,7 +4,7 @@
 
 Use `manim.skill` for Manim project layout, naming, rendering, verification, and concatenation conventions.
 
-This file is the project-level index. Keep detailed per-clip storyboards in `2026-05-05/storyboards/`, Manim code in `2026-05-05/scripts/`, and canonical rendered clips in `2026-05-05/video_outputs/`.
+This file is the project-level index. Keep detailed per-clip storyboards in `2026-05-05_Diffusion-Score/storyboards/`, Manim code in `2026-05-05_Diffusion-Score/scripts/`, and canonical rendered clips in `2026-05-05_Diffusion-Score/video_outputs/`.
 
 ## Goal
 
@@ -16,9 +16,9 @@ This file is the project-level index. Keep detailed per-clip storyboards in `202
 
 The score is the local direction in which log-density increases:
 
-```tex
+$$
 s_t(x) = \nabla_x \log p_t(x)
-```
+$$
 
 The video should first make this field intuition concrete in 2D. Then it should use the same visual language to compare how VE, VP, and flow matching define different dynamics between simple noise and structured data.
 
@@ -33,7 +33,7 @@ The common thread:
 
 | Clip                | Purpose                                                                  | Storyboard                           | Script                           | Output                                       | Status   |
 | ------------------- | ------------------------------------------------------------------------ | ------------------------------------ | -------------------------------- | -------------------------------------------- | -------- |
-| A01-score_intuition | Introduce score as a 2D vector-field intuition and bridge to generation. | `storyboards/A01-score_intuition.md` | `scripts/A01-score_intuition.py` | `video_outputs/A01-score_intuition_720p.mp4` | Rendered |
+| A01-score_intuition | Introduce `log p(x)` as 2D contours, then show score as the gradient field and bridge to generation. | `storyboards/A01-score_intuition.md` | `scripts/A01-score_intuition.py` | `video_outputs/A01-score_intuition_720p.mp4` | Rendered |
 
 
 ## Planned Video Structure
@@ -42,7 +42,7 @@ The common thread:
 
 Goal: establish the visual language.
 
-1. `A01-score_intuition`: show score definition, one Gaussian, mixture score field, and a conceptual generation path.
+1. `A01-score_intuition`: show `log p(x)` contours for one Gaussian, derive one score arrow, expand to a full score field, then bridge to a mixture-field generation sketch.
 2. Possible next clip: score fields across noise levels.
 
 ### Section B: VE Diffusion
@@ -92,21 +92,20 @@ High-level idea:
 
 Source:
 
-1. `2026-05-05/storyboards/A01-score_intuition.md`
-2. `2026-05-05/scripts/A01-score_intuition.py`
+1. `2026-05-05_Diffusion-Score/storyboards/A01-score_intuition.md`
+2. `2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py`
 
 Rendered outputs:
 
-1. `2026-05-05/video_outputs/A01-score_intuition_720p.mp4`
-2. `2026-05-05/video_outputs/A01-score_intuition_480p.mp4`
+1. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_720p.mp4`
+2. `2026-05-05_Diffusion-Score/video_outputs/A01-score_intuition_480p.mp4`
 
 Render commands:
 
 ```bash
-conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05/video_outputs -o A01-score_intuition_720p 2026-05-05/scripts/A01-score_intuition.py ScoreIntuition
+conda run -n py311 manim -qm --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o A01-score_intuition_720p 2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py ScoreIntuition
 ```
 
 ```bash
-conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05/video_outputs -o A01-score_intuition_480p 2026-05-05/scripts/A01-score_intuition.py ScoreIntuition
+conda run -n py311 manim -ql --format mp4 --media_dir 2026-05-05_Diffusion-Score/video_outputs -o A01-score_intuition_480p 2026-05-05_Diffusion-Score/scripts/A01-score_intuition.py ScoreIntuition
 ```
-
